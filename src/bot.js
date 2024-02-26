@@ -1,8 +1,17 @@
 require("dotenv").config();
+const { Client, IntentsBitField, GatewayIntentBits } = require("discord.js");
 
-const fetch = require("node-fetch");
-const { Client, IntentsBitField } = require("discord.js");
-const botVersion = "0.1";
+//Command Utils
+const version = require("./commands/version");
+const bosnia = require("./commands/bosnia");
+const gif = require("./commands/gif");
+
+const { play } = require("./commands/play");
+const stop = require("./commands/stop");
+const queue = require("./commands/queue");
+const remove = require("./commands/remove");
+const skip = require("./commands/skip");
+
 let botName;
 
 const botClient = new Client({
@@ -11,10 +20,9 @@ const botClient = new Client({
         IntentsBitField.Flags.GuildMembers,
         IntentsBitField.Flags.GuildMessages,
         IntentsBitField.Flags.MessageContent,
+        IntentsBitField.Flags.GuildVoiceStates,
     ],
 });
-
-botClient.login(process.env.TOKEN);
 
 botClient.on("ready", function(client) {
     botName = client.user.username;
@@ -24,34 +32,37 @@ botClient.on("ready", function(client) {
 botClient.on("interactionCreate", async function(interaction) {
     if(!interaction.isChatInputCommand()) return;
 
-    if(interaction.commandName === "version") {
-        interaction.reply(`📡 Der ${botName}-Bot ist auf der Version ${botVersion}!`);
-    }
+	const command = interaction.commandName;
 
-    if(interaction.commandName === "gif") {
-        try {
-            const topic = interaction.options.getString("thema");
-            const url = `https://tenor.googleapis.com/v2/search?q=${topic}&key=${process.env.TENORKEY}&client_key=PlaytrixBot&ContentFilter=high`;
-
-            let response = await fetch(url);
-            let json = await response.json();
-            const index = Math.floor(Math.random() * json.results.length);
-
-            await interaction.reply(json.results[index].url);
-            await interaction.channel.send(`Suchwort: ${topic}`);
-        } catch (error) {
-            interaction.reply("📡 Dieses Suchkriterium hat leider nicht geklappt. Probiere vielleicht ein anderes aus.");
-        }
-    }
-
-    if(interaction.commandName === "bosnia") {
-        interaction.reply("https://www.youtube.com/watch?v=hFbZLEZa-y8");
-    }
+	switch(command) {
+		case "version":
+			version(interaction);
+			break;
+		case "bosnia":
+			bosnia(interaction);
+			break;
+		case "play":
+			play(interaction);
+			break;
+		case "stop":
+			stop(interaction);
+			break;
+		case "gif":
+			gif(interaction);
+			break;
+		case "queue":
+			queue(interaction);
+			break;
+		case "remove":
+			remove(interaction);
+			break;
+		case "skip":
+			skip(interaction);
+			break;
+		default:
+			interaction.reply("📡 Dieser Befehl existiert nicht oder ich habe ihn nicht erkannt. Bitte versuche es erneut.");
+			break;
+	}
 });
 
-botClient.on("messageCreate", function(message) {
-    //Check if user is a bot
-    if(message.author.bot) {
-        return;
-    }
-});
+botClient.login(process.env.TOKEN);
