@@ -4,9 +4,7 @@ const removeNick = require("./removeNick");
 async function stop(interaction) {
     try {
         const voiceChannel = interaction.member.voice.channel;
-
         if (!voiceChannel) return interaction.reply("📡 Du musst in einem Sprachkanal sein, um die Ausgabe zu stoppen!");
-
         const connection = getVoiceConnection(voiceChannel.guild.id);
 
         if (connection) {
@@ -17,11 +15,7 @@ async function stop(interaction) {
 
                 if (audioPlayer) {
                     audioPlayer.stop();
-                    if(connection && !connection.destroyed) {
-                        connection.destroy();
-                        removeNick(interaction);
-                    }
-                    interaction.reply("📡 Die Ausgabe wurde gestoppt, und der Bot hat den Sprachkanal verlassen!");
+                    if(connection && !connection.destroyed) connection.destroy();
                 } else {
                     console.log("AudioPlayer is undefined or null:", audioPlayer);
                     interaction.reply("📡 Der AudioPlayer ist nicht verfügbar. Möglicherweise wurde keine Musik abgespielt.");
@@ -38,12 +32,9 @@ async function stop(interaction) {
         console.error("Error in stop command:", error);
         interaction.reply("📡 Ein Fehler ist aufgetreten. Versuche es später erneut.");
 
-        // If the connection is still open, you may want to destroy it
         const voiceChannel = interaction.member.voice.channel;
         const connection = getVoiceConnection(voiceChannel.guild.id);
-        if (connection && !connection.destroyed) {
-            connection.destroy();
-        }
+        if (connection && !connection.destroyed) connection.destroy();
     }
 }
 

@@ -3,6 +3,10 @@ const { REST, Routes, ApplicationCommandOptionType } = require("discord.js");
 
 const commands = [
     {
+        name: "help",
+        description: "Hilfestellung zum VapeMaster.",
+    },
+    {
         name: "version",
         description: "Gibt die aktuelle Botversion aus.",
     },
@@ -17,14 +21,6 @@ const commands = [
                 required: true,
             }
         ],
-    },
-    {
-        name: "bosnia",
-        description: "proud to be BOSSNIAN",
-    },
-    {
-        name: "deutschland",
-        description: "proud to be DEUTSCH",
     },
     {
         name: "play",
@@ -66,7 +62,7 @@ const commands = [
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
-(async () => {
+async function registerCommands() {
     try {
         await rest.put(
             Routes.applicationGuildCommands(process.env.BOTCLIENTID, process.env.SERVERID),
@@ -76,4 +72,6 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
     } catch (error) {
         console.error("📡 Error registering slash commands:", error);
     }
-})();
+};
+
+module.exports = registerCommands;

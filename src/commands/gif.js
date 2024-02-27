@@ -10,10 +10,8 @@ async function gif(interaction) {
 		const index = Math.floor(Math.random() * json.results.length);
 
 		await interaction.reply(json.results[index].url);
-		await interaction.channel.send(`Suchwort: ${topic}`);
-	} catch (error) {
-		interaction.reply("📡 Dieses Suchkriterium hat leider nicht geklappt. Probiere vielleicht ein anderes aus.");
-	}
+		await interaction.channel.send(`Suchkriterium: ${topic}`);
+	} catch (error) { interaction.reply("📡 Dieses Suchkriterium hat leider nicht geklappt. Probiere vielleicht ein anderes aus.") }
 }
 
 module.exports = gif;

@@ -1,10 +1,11 @@
 require("dotenv").config();
 const { Client, IntentsBitField, GatewayIntentBits } = require("discord.js");
+const registerCommands = require("./commands.js");
 
 //Command Utils
 const version = require("./commands/version");
-const bosnia = require("./commands/bosnia");
 const gif = require("./commands/gif");
+const help = require("./commands/help");
 
 const { play } = require("./commands/play");
 const stop = require("./commands/stop");
@@ -27,6 +28,7 @@ const botClient = new Client({
 botClient.on("ready", function(client) {
     botName = client.user.username;
     console.log(`📡 ${botName} wurde gestartet.`);
+	registerCommands();
 });
 
 botClient.on("interactionCreate", async function(interaction) {
@@ -34,12 +36,12 @@ botClient.on("interactionCreate", async function(interaction) {
 
 	const command = interaction.commandName;
 
-	switch(command) {
+	switch (command) {
+		case "help":
+			help(interaction);
+			break;
 		case "version":
 			version(interaction);
-			break;
-		case "bosnia":
-			bosnia(interaction);
 			break;
 		case "play":
 			play(interaction);
