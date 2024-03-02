@@ -11,6 +11,7 @@ const axios = require("axios");
 require("dotenv").config();
 
 const audioQueue = [];
+let queueCounter = -1;
 let channelName;
 
 let audioPlayer;
@@ -20,6 +21,8 @@ let lastMember;
 
 async function play(interaction) {
     try {
+        queueCounter++;
+
         const voiceChannel = interaction.member.voice.channel;
         const link = interaction.options.getString("link");
         channelID = interaction.channelId;
@@ -37,10 +40,10 @@ async function play(interaction) {
             playFirstInQueue(voiceConnection, audioQueue, true);
         }
         channelName = await interaction.guild.channels.fetch(voiceConnection.joinConfig.channelId);
-        const replyMSG = audioQueue.length === 1 ? `📡 **${audioQueue[0].title}** wird abgespielt!` : `📡 **${audioQueue[0].title}** wurde zur Queue hinzugefügt!`;
+        const replyMSG = audioQueue.length === 1 ? `📡 **${audioQueue[queueCounter].title}** wird abgespielt!` : `📡 **${audioQueue[queueCounter].title}** wurde zur Queue hinzugefügt!`;
         interaction.reply(replyMSG);
         console.log("[LOG]: ", replyMSG);
-    } catch(error) { console.error(error) }   
+    } catch(error) { console.error("[ERROR]: ", error) }   
 }
 
 async function playFirstInQueue(voiceConnection, audioQueue, isFirst) {
@@ -65,7 +68,8 @@ async function playFirstInQueue(voiceConnection, audioQueue, isFirst) {
         }
 
         audioPlayer.on("idle", queueManagement);
-    } catch (error) { console.error("[ERROR]: ", error) }
+        audioPlayer.on("error", error => { console.error("[ERROR]: ", error) });
+    } catch(error) { console.error("[ERROR]: ", error) }
 }
 
 function listenerManagement() {
@@ -77,6 +81,7 @@ function queueManagement() {
     try {
         listenerManagement();
         audioQueue.shift();
+        queueCounter--;
         playFirstInQueue(voiceConnection, audioQueue, false);
     } catch(error) { console.error("[ERROR]: ", error) }
 }
@@ -87,15 +92,15 @@ function queue(interaction) {
     let message = `📡 **Die aktuelle Queue in ${channelName}:**\n\n▶️ **Spielt jetzt:** `;
     for(let index = 0; index < audioQueue.length; index++) {
         let titleElement;
-        if(index !== 0) { titleElement = `⬆️ **Spielt danach:** ${audioQueue[index].title}\n\n` }
-        else { titleElement = `${audioQueue[index].title}\n\n` }
+        if(index !== 0) titleElement = `⬆️ **Spielt danach:** ${audioQueue[index].title}\n\n`;
+        else titleElement = `${audioQueue[index].title}\n\n`;
         message += titleElement;
     }
 
     interaction.reply(message);
 }
 
-function stop() {
+function stop(interaction) {
     let msg;
     try {
         const voiceChannel = lastMember.voice.channel;
@@ -104,25 +109,29 @@ function stop() {
         const connection = getVoiceConnection(voiceChannel.guild.id);
         if(!connection) msg = "📡 **Der Bot ist derzeit in keinem Sprachkanal aktiv.**";
         listenerManagement();
-        msg = "📡 **Die Ausgabe wurde gestoppt, und der Bot wird bald den Sprachkanal verlassen!**";
+        msg = "📡 **Die Ausgabe wurde gestoppt, und der Bot wird den Sprachkanal verlassen!**";
 
         setTimeout(() => {
             if(connection && !connection.destroyed) {
                 connection.destroy();
+                queueCounter = -1;
             }
         }, 3500);
     } catch(error) { console.error("[ERROR]: ", error) }
 
-    const headers = { "Authorization": `Bot ${process.env.TOKEN}`, "Content-Type": "application/json" };
-    const data = { content: msg };
-    axios.post(`https://discord.com/api/v9/channels/${channelID}/messages`, data, { headers });
+    if(!interaction) {
+        const headers = { "Authorization": `Bot ${process.env.TOKEN}`, "Content-Type": "application/json" };
+        const data = { content: msg };
+        axios.post(`https://discord.com/api/v9/channels/${channelID}/messages`, data, { headers });
+    } else interaction.reply(msg);
 }
 
 function skip(interaction) {
     try {
         if(!audioQueue) return interaction.reply("📡 Es gibt keine aktive Warteschlange, die übersprungen werden kann.");
-        if(audioQueue.length <= 1) return interaction.reply("📡 Es gibt keine weiteren Songs in der Warteschlange zum Überspringen. Wenn du die Musik beenden willst, benutze **/stop**.");
+        if(audioQueue.length <= 1) return interaction.reply("📡 Es gibt keine weiteren Songs in der Warteschlange zum Überspringen.");
         queueManagement();
+        interaction.reply("📡 **Einen Moment...**");
     } catch(error) { console.error("[ERROR]: ", error) }
 }
 
