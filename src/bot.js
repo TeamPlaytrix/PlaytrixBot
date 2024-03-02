@@ -6,14 +6,18 @@ const registerCommands = require("./commands.js");
 const version = require("./commands/version");
 const gif = require("./commands/gif");
 const help = require("./commands/help");
-
-const { play } = require("./commands/play");
-const stop = require("./commands/stop");
-const queue = require("./commands/queue");
-const remove = require("./commands/remove");
-const skip = require("./commands/skip");
+const { play, stop, queue, skip } = require("./commands/music");
 
 let botName;
+const cmdfuncs = {
+	"help": help,
+	"version": version,
+	"gif": gif,
+	"play": play,
+	"queue": queue,
+	"stop": stop,
+	"skip": skip,
+}
 
 const botClient = new Client({
     intents: [
@@ -35,35 +39,13 @@ botClient.on("interactionCreate", async function(interaction) {
     if(!interaction.isChatInputCommand()) return;
 
 	const command = interaction.commandName;
+	const cmdfunc = cmdfuncs[command];
 
-	switch (command) {
-		case "help":
-			help(interaction);
-			break;
-		case "version":
-			version(interaction);
-			break;
-		case "play":
-			play(interaction);
-			break;
-		case "stop":
-			stop(interaction);
-			break;
-		case "gif":
-			gif(interaction);
-			break;
-		case "queue":
-			queue(interaction);
-			break;
-		case "remove":
-			remove(interaction);
-			break;
-		case "skip":
-			skip(interaction);
-			break;
-		default:
-			interaction.reply("📡 Dieser Befehl existiert nicht oder ich habe ihn nicht erkannt. Bitte versuche es erneut.");
-			break;
+	try {
+		await cmdfunc(interaction);
+	} catch(error) {
+		interaction.reply("📡 Dieser Befehl existiert nicht oder ich habe ihn nicht erkannt. Bitte versuche es erneut.");
+		console.error(error);
 	}
 });
 

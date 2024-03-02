@@ -11,7 +11,7 @@ async function gif(interaction) {
 
 		await interaction.reply(json.results[index].url);
 		await interaction.channel.send(`Suchkriterium: ${topic}`);
-	} catch (error) { interaction.reply("📡 Dieses Suchkriterium hat leider nicht geklappt. Probiere vielleicht ein anderes aus.") }
+	} catch(error) { interaction.reply("📡 Dieses Suchkriterium hat leider nicht geklappt. Probiere vielleicht ein anderes aus.") }
 }
 
 module.exports = gif;

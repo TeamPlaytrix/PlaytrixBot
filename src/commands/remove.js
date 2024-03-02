@@ -1,4 +1,4 @@
-const { queues } = require("./play");
+const { queues } = require("./music");
 const skip = require("./skip");
 const queue = require("./queue");
 
