@@ -10,7 +10,7 @@ const playdl = require("play-dl");
 const axios = require("axios");
 require("dotenv").config();
 
-const audioQueue = [];
+let audioQueue = [];
 let queueCounter = -1;
 let channelName;
 
