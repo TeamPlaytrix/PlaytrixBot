@@ -67,6 +67,7 @@ async function playFirstInQueue(voiceConnection, audioQueue, isFirst) {
             const headers = { "Authorization": `Bot ${process.env.TOKEN}`, "Content-Type": "application/json" };
             const data = { content: "📡 **Der nächste Song der Queue wird abgespielt!**" };
             axios.post(`https://discord.com/api/v9/channels/${channelID}/messages`, data, { headers });
+            console.log("[LOG]: Der nächste Song der Queue wird abgespielt!");
         }
         audioPlayer = createAudioPlayer({ behaviors: { noSubscriber: NoSubscriberBehavior.Play } });
         const URL = queue[0].url.trim();

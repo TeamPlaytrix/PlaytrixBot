@@ -42,18 +42,18 @@ const commands = [
         name: "queue",
         description: "Gibt die aktuelle Song-Queue aus."
     },
-    {
-        name: "remove",
-        description: "Entferne einen Song aus der Queue. Gib seine Postion an.",
-        options: [
-            {
-                name: "position",
-                description: "Die Position des Songs in der Queue. Beispiel: Der 2. Song wäre die 2",
-                type: ApplicationCommandOptionType.Integer,
-                required: true,
-            },
-        ],
-    },
+    //{
+        //name: "remove",
+        //description: "Entferne einen Song aus der Queue. Gib seine Postion an.",
+        //options: [
+            //{
+                //name: "position",
+                //description: "Die Position des Songs in der Queue. Beispiel: Der 2. Song wäre die 2",
+                //type: ApplicationCommandOptionType.Integer,
+                //required: true,
+            //},
+        //],
+    //},
     {
         name: "skip",
         description: "Überspringe den momentan spielenden Song.",
@@ -68,10 +68,8 @@ async function registerCommands() {
             Routes.applicationCommands(process.env.BOTCLIENTID),
             { body: commands }
         );
-        console.log("📡 Registered slash commands");
-    } catch (error) {
-        console.error("📡 Error registering slash commands:", error);
-    }
+        console.log("📡 Befehle wurden geladen und registriert.");
+    } catch(error) { console.error("[ERROR]: ", error) }
 };
 
 module.exports = registerCommands;
