@@ -17,7 +17,7 @@ let channelName;
 let audioPlayer;
 let voiceConnection;
 let channelID;
-let lastMember;
+let lastMemberChannel;
 
 async function play(interaction) {
     try {
@@ -26,7 +26,7 @@ async function play(interaction) {
         const voiceChannel = interaction.member.voice.channel;
         const link = interaction.options.getString("link");
         channelID = interaction.channelId;
-        lastMember = interaction.member;
+        lastMemberChannel = interaction.member.voice.channel;
 
         const getAudio = await playdl.search(link, { limit: 1 });
         audioQueue.push(getAudio[0]);
@@ -103,7 +103,7 @@ function queue(interaction) {
 function stop(interaction) {
     let msg;
     try {
-        const voiceChannel = lastMember.voice.channel;
+        const voiceChannel = lastMemberChannel;
         if(!voiceChannel) msg = "📡 **Du musst in einem Sprachkanal sein, um die Ausgabe zu stoppen!**";
 
         const connection = getVoiceConnection(voiceChannel.guild.id);
@@ -111,12 +111,11 @@ function stop(interaction) {
         listenerManagement();
         msg = "📡 **Die Ausgabe wurde gestoppt, und der Bot wird den Sprachkanal verlassen!**";
 
-        setTimeout(() => {
-            if(connection && !connection.destroyed) {
-                connection.destroy();
-                queueCounter = -1;
-            }
-        }, 3500);
+        if(connection && !connection.destroyed) {
+            connection.destroy();
+            audioQueue = [];
+            queueCounter = -1;
+        }
     } catch(error) { console.error("[ERROR]: ", error) }
 
     if(!interaction) {
