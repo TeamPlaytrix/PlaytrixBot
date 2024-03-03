@@ -10,45 +10,56 @@ const playdl = require("play-dl");
 const axios = require("axios");
 require("dotenv").config();
 
-let audioQueue = [];
-let queueCounter = -1;
+const audioQueue = new Map();
 let channelName;
-
-let audioPlayer;
+let latestSavedVoiceChannel;
 let voiceConnection;
-let channelID;
-let lastMemberChannel;
+let guildID;
+let channelID
 
 async function play(interaction) {
     try {
-        queueCounter++;
+        guildID = interaction.guildId;
+        channelID = interaction.channelId;
 
         const voiceChannel = interaction.member.voice.channel;
-        const link = interaction.options.getString("link");
-        channelID = interaction.channelId;
-        lastMemberChannel = interaction.member.voice.channel;
+        latestSavedVoiceChannel = voiceChannel;
+        if(!voiceChannel) interaction.reply("📡 **Du musst in einem Sprachkanal sein, um Audio abzuspielen!**");
 
-        const getAudio = await playdl.search(link, { limit: 1 });
-        audioQueue.push(getAudio[0]);
+        const link = interaction.options.getString("link");
+        let queue = audioQueue.get(guildID);
+        if(!queue) {
+            queue = [];
+            audioQueue.set(guildID, queue);
+        }
+
+        const searchResult = await playdl.search(link, { limit: 1 });
+        if(!searchResult || !searchResult[0]) interaction.reply("📡 **Fehler beim Finden einer Audio.");
+
+        queue.push(searchResult[0]);
     
-        if(audioQueue.length === 1) {
+        if(queue.length === 1) {
             voiceConnection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: interaction.guild.id,
                 adapterCreator: interaction.guild.voiceAdapterCreator
             });
-            playFirstInQueue(voiceConnection, audioQueue, true);
+            channelName = await interaction.guild.channels.fetch(voiceConnection.joinConfig.channelId);
+            playFirstInQueue(voiceConnection, audioQueue, true, guildID);
         }
-        channelName = await interaction.guild.channels.fetch(voiceConnection.joinConfig.channelId);
-        const replyMSG = audioQueue.length === 1 ? `📡 **${audioQueue[queueCounter].title}** wird abgespielt!` : `📡 **${audioQueue[queueCounter].title}** wurde zur Queue hinzugefügt!`;
+        const replyMSG = queue.length === 1 ? 
+            `📡 **${queue[0].title}** wird abgespielt!` : 
+            `📡 **${queue[queue.length - 1].title}** wurde zur Queue hinzugefügt!`
+        ;
         interaction.reply(replyMSG);
         console.log("[LOG]: ", replyMSG);
     } catch(error) { console.error("[ERROR]: ", error) }   
 }
 
 async function playFirstInQueue(voiceConnection, audioQueue, isFirst) {
-    if(audioQueue.length === 0) { 
-        stop();
+    let queue = audioQueue.get(guildID);
+    if(queue.length === 0) { 
+        destroy();
         return;
     }
     try {
@@ -58,7 +69,7 @@ async function playFirstInQueue(voiceConnection, audioQueue, isFirst) {
             axios.post(`https://discord.com/api/v9/channels/${channelID}/messages`, data, { headers });
         }
         audioPlayer = createAudioPlayer({ behaviors: { noSubscriber: NoSubscriberBehavior.Play } });
-        const URL = audioQueue[0].url.trim();
+        const URL = queue[0].url.trim();
         const stream = await playdl.stream(URL, { quality: 140 });
 
         if(stream && stream.stream && stream.type) {
@@ -80,20 +91,34 @@ function listenerManagement() {
 function queueManagement() {
     try {
         listenerManagement();
-        audioQueue.shift();
-        queueCounter--;
-        playFirstInQueue(voiceConnection, audioQueue, false);
+        let queue = audioQueue.get(guildID);
+        queue.shift();
+        playFirstInQueue(voiceConnection, audioQueue, false, guildID);
+    } catch(error) { console.error("[ERROR]: ", error) }
+}
+
+function destroy() {
+    try {
+        const headers = { "Authorization": `Bot ${process.env.TOKEN}`, "Content-Type": "application/json" };
+        const data = { content: "📡 **Die Queue ist vorbei und der Bot geht jetzt!**" };
+        axios.post(`https://discord.com/api/v9/channels/${channelID}/messages`, data, { headers });
+        setTimeout(function() {
+            listenerManagement();
+            voiceConnection.destroy();
+        }, 3500);
     } catch(error) { console.error("[ERROR]: ", error) }
 }
 
 function queue(interaction) {
-    if(audioQueue.length === 0) return interaction.reply(`📡 **Die aktuelle Queue ist leer.**`);  
+    let queue = audioQueue.get(guildID);
+
+    if(!queue || queue.length === 0) return interaction.reply(`📡 **Die aktuelle Queue ist leer.**`);  
 
     let message = `📡 **Die aktuelle Queue in ${channelName}:**\n\n▶️ **Spielt jetzt:** `;
-    for(let index = 0; index < audioQueue.length; index++) {
+    for(let index = 0; index < queue.length; index++) {
         let titleElement;
-        if(index !== 0) titleElement = `⬆️ **Spielt danach:** ${audioQueue[index].title}\n\n`;
-        else titleElement = `${audioQueue[index].title}\n\n`;
+        if(index !== 0) titleElement = `⬆️ **Spielt danach:** ${queue[index].title}\n\n`;
+        else titleElement = `${queue[index].title}\n\n`;
         message += titleElement;
     }
 
@@ -103,7 +128,7 @@ function queue(interaction) {
 function stop(interaction) {
     let msg;
     try {
-        const voiceChannel = lastMemberChannel;
+        const voiceChannel = latestSavedVoiceChannel;
         if(!voiceChannel) msg = "📡 **Du musst in einem Sprachkanal sein, um die Ausgabe zu stoppen!**";
 
         const connection = getVoiceConnection(voiceChannel.guild.id);
@@ -111,25 +136,23 @@ function stop(interaction) {
         listenerManagement();
         msg = "📡 **Die Ausgabe wurde gestoppt, und der Bot wird den Sprachkanal verlassen!**";
 
+        audioQueue.delete(guildID);
+
         if(connection && !connection.destroyed) {
             connection.destroy();
-            audioQueue = [];
-            queueCounter = -1;
+            interaction.reply(msg);
         }
     } catch(error) { console.error("[ERROR]: ", error) }
-
-    if(!interaction) {
-        const headers = { "Authorization": `Bot ${process.env.TOKEN}`, "Content-Type": "application/json" };
-        const data = { content: msg };
-        axios.post(`https://discord.com/api/v9/channels/${channelID}/messages`, data, { headers });
-    } else interaction.reply(msg);
 }
 
 function skip(interaction) {
     try {
-        if(!audioQueue) return interaction.reply("📡 Es gibt keine aktive Warteschlange, die übersprungen werden kann.");
-        if(audioQueue.length <= 1) return interaction.reply("📡 Es gibt keine weiteren Songs in der Warteschlange zum Überspringen.");
-        queueManagement();
+        const guildID = interaction.guildId;
+        let queue = audioQueue.get(guildID);
+
+        if(!queue) return interaction.reply("📡 Es gibt keine aktive Warteschlange, die übersprungen werden kann.");
+        if(queue.length <= 1) return interaction.reply("📡 Es gibt keine weiteren Songs in der Warteschlange zum Überspringen.");
+        queueManagement(guildID);
         interaction.reply("📡 **Einen Moment...**");
     } catch(error) { console.error("[ERROR]: ", error) }
 }
